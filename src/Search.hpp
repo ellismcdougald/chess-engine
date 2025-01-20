@@ -9,8 +9,8 @@
 #include "Evaluation.hpp"
 #include "MoveGenerator.hpp"
 #include "MoveList.hpp"
-#include "TTable.hpp"
 #include "PVTable.hpp"
+#include "TTable.hpp"
 
 class Search {
 public:
@@ -45,11 +45,13 @@ public:
   int negamax_root_iterative_deepening(unsigned time_limit, Board &board,
                                        MoveGenerator &move_gen,
                                        Evaluation &eval);
+  int quiescence_search(int alpha, int beta, Board &board,
+                        MoveGenerator &move_gen, Evaluation &eval);
   // TODO implement iterative deepening with time management
 private:
   unsigned current_ply;
   unsigned nodes_evaluated;
-  
+
   Move best_move;
   TTable t_table;
   PVTable pv_table;

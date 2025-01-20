@@ -60,6 +60,10 @@ public:
   bool is_double_pawn_push();
   bool is_null();
   inline bool is_castle() { return get_flags() == 2 || get_flags() == 3; }
+  inline bool is_capture() {
+    return get_flags() == 4 || get_flags() == 5 ||
+           (get_flags() >= 12 && get_flags() <= 15);
+  }
 
   // Setters:
   inline void set_origin(bitboard origin) {

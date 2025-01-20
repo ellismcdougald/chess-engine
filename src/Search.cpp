@@ -174,8 +174,12 @@ int Search::negamax_root(int depth, Board &board, MoveGenerator &move_gen,
 int Search::negamax_id(int depth, int alpha, int beta, Board &board,
                        MoveGenerator &move_gen, Evaluation &eval) {
   if (depth == 0) {
-    //++nodes_evaluated;
-    return eval.evaluate(board) * (board.get_turn_color() == WHITE ? 1 : -1);
+    if (board.get_last_move(negate_color(board.get_turn_color()))
+            .is_capture()) {
+      return quiescence_search(alpha, beta, board, move_gen, eval);
+    } else {
+      return eval.evaluate(board) * (board.get_turn_color() == WHITE ? 1 : -1);
+    }
   }
 
   int previous_alpha = alpha;
@@ -215,7 +219,7 @@ int Search::negamax_id(int depth, int alpha, int beta, Board &board,
 
       if (score > alpha) {
         alpha = score;
-	pv_table.add_move(current_ply, local_best_move);
+        pv_table.add_move(current_ply, local_best_move);
       }
     }
   }
@@ -249,7 +253,7 @@ int Search::negamax_root_iterative_deepening(unsigned time_limit, Board &board,
     int alpha = -999999;
     int beta = -alpha;
     int score = 0;
-    
+
     uint64_t position_zkey = board.get_zkey();
     TTEntry tt_entry = t_table.probe_entry(position_zkey, search_depth);
 
@@ -261,16 +265,16 @@ int Search::negamax_root_iterative_deepening(unsigned time_limit, Board &board,
           move_gen.generate_legal_moves(board, board.get_turn_color());
       for (int i = 0; i < moves.size(); i++) {
         board.execute_move(moves[i]);
-	++nodes_evaluated;
-	++current_ply;
+        ++nodes_evaluated;
+        ++current_ply;
         int score =
             -negamax_id(search_depth - 1, -beta, -alpha, board, move_gen, eval);
         board.undo_move(moves[i]);
-	--current_ply;
+        --current_ply;
         if (score > alpha) {
           alpha = score;
           best_move = moves[i];
-	  pv_table.add_move(current_ply, best_move);
+          pv_table.add_move(current_ply, best_move);
         }
       }
 
@@ -283,6 +287,16 @@ int Search::negamax_root_iterative_deepening(unsigned time_limit, Board &board,
                         current_time - start_time)
                         .count();
       if (time_passed > 0.25 * time_limit) {
+        std::cout << "info";
+        std::cout << " depth " << search_depth;
+        std::cout << " score cp " << alpha;
+        std::cout << " nodes " << nodes_evaluated;
+        std::cout << " nps " << (float)nodes_evaluated / time_passed * 1000;
+        std::cout << " time " << time_passed;
+        std::cout << " pv ";
+        pv_table.print_pv();
+        std::cout << std::endl;
+
         return alpha;
       }
     }
@@ -310,6 +324,44 @@ int Search::negamax_root_iterative_deepening(unsigned time_limit, Board &board,
       return alpha;
     }
   }
+}
+
+// https://www.chessprogramming.org/Quiescence_Search
+int Search::quiescence_search(int alpha, int beta, Board &board,
+                              MoveGenerator &move_gen, Evaluation &eval) {
+  int stand_pat =
+      eval.evaluate(board) * (board.get_turn_color() == WHITE ? 1 : -1);
+  int best_value = stand_pat;
+
+  if (stand_pat >= beta) {
+    return stand_pat;
+  }
+  if (alpha < stand_pat) {
+    alpha = stand_pat;
+  }
+
+  MoveList moves = move_gen.generate_legal_moves(board, board.get_turn_color());
+  for (int i = 0; i < moves.size(); ++i) {
+    if (moves[i].is_capture()) {
+      board.execute_move(moves[i]);
+      ++current_ply;
+      int score = -quiescence_search(-beta, -alpha, board, move_gen, eval);
+      board.undo_move(moves[i]);
+      --current_ply;
+
+      if (score >= beta) {
+        return score;
+      }
+      if (score > best_value) {
+        best_value = score;
+      }
+      if (score > alpha) {
+        alpha = score;
+      }
+    }
+  }
+
+  return best_value;
 }
 
 #endif // GUARD
