@@ -55,6 +55,10 @@ private:
   Move best_move;
   TTable t_table;
   PVTable pv_table;
+
+  // Move Ordering
+  static const uint8_t victim_aggressor_values[6][6]; // victim_aggressor_values[victim][attacker]
+  void sort_moves(MoveList& moves, Move& pv_move, Move& tt_move, Board& board);
 };
 
 #endif // GUARD

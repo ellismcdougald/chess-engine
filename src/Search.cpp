@@ -199,6 +199,10 @@ int Search::negamax_id(int depth, int alpha, int beta, Board &board,
 
   int best_score = -999999;
   MoveList moves = move_gen.generate_legal_moves(board, board.get_turn_color());
+
+  Move null_move = Move();
+  sort_moves(moves, null_move, null_move, board); // pv move and tt move disabled for now
+  
   Move local_best_move;
   for (int i = 0; i < moves.size(); i++) {
     board.execute_move(moves[i]);
@@ -261,8 +265,11 @@ int Search::negamax_root_iterative_deepening(unsigned time_limit, Board &board,
       best_move = tt_entry.get_best_move();
       alpha = tt_entry.get_score();
     } else { // TT miss
-      MoveList moves =
-          move_gen.generate_legal_moves(board, board.get_turn_color());
+      MoveList moves = move_gen.generate_legal_moves(board, board.get_turn_color());
+
+      Move null_move = Move();
+      sort_moves(moves, null_move, null_move, board); // pv move and tt move disabled for now
+      
       for (int i = 0; i < moves.size(); i++) {
         board.execute_move(moves[i]);
         ++nodes_evaluated;
@@ -363,5 +370,45 @@ int Search::quiescence_search(int alpha, int beta, Board &board,
 
   return best_value;
 }
+
+struct move_exp{
+  Move move16;
+  unsigned score;
+};
+
+// TODO: move this to a dedicated move ordering class
+// TODO: optimize
+void Search::sort_moves(MoveList& moves, Move& pv_move, Move& tt_move, Board& board) {
+  unsigned PV_BASE = 300;
+  unsigned TT_BASE = 200;
+  unsigned MMV_LVA_BASE = 100;
+
+  move_exp sorted_moves[256];
+  int num_moves = moves.size();
+  for (int i = 0; i < num_moves; i++) {
+    Move &move = moves[i];
+    
+    if (move.is_capture()) {
+      Piece moved_piece = board.get_piece_at_position(move.get_origin(), board.get_turn_color());
+      Piece captured_piece = board.get_piece_at_position(move.get_destination(), board.get_turn_color());
+      sorted_moves[i] = {move, MMV_LVA_BASE + victim_aggressor_values[moved_piece][captured_piece]};
+    } else {
+      sorted_moves[i] = {move, 0};
+    }
+  }
+
+  std::sort(sorted_moves, sorted_moves + num_moves, [](move_exp m1, move_exp m2) {
+    return m1.score > m2.score;
+  });
+}
+
+const uint8_t Search::victim_aggressor_values[6][6] = {
+  {15, 14, 13, 12, 11, 10}, // victim P, aggressor P, K, B, R, Q, K
+  {25, 24, 23, 22, 21, 20}, // victim K, aggressor P, K, B, R, Q, K
+  {35, 36, 37, 38, 39, 40}, // victim B, aggressor P, K, B, R, Q, K
+  {45, 46, 47, 48, 49, 50}, // victim R, aggressor P, K, B, R, Q, K
+  {55, 56, 57, 58, 59, 60}, // victim Q, aggressor P, K, B, R, Q, K
+  {0, 0, 0, 0, 0, 0} // victim K, aggressor P, K, B, R, Q, K
+};
 
 #endif // GUARD

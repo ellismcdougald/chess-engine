@@ -794,14 +794,16 @@ bitboard Board::get_attacks_to_king(bitboard king_position, Color king_color) {
   Color op_color = negate_color(king_color);
   return (get_pawn_attacks(king_position, king_color) &
           get_piece_positions(PAWN, op_color)) |
-         (get_knight_attacks(king_position) &
-          get_piece_positions(KNIGHT, op_color)) |
-         (get_bishop_attacks(king_position) &
-          (get_piece_positions(BISHOP, op_color) |
-           get_piece_positions(QUEEN, op_color))) |
-         (get_rook_attacks(king_position) &
-          (get_piece_positions(ROOK, op_color) |
-           get_piece_positions(QUEEN, op_color)));
+    (get_knight_attacks(king_position) &
+     get_piece_positions(KNIGHT, op_color)) |
+    (get_bishop_attacks(king_position) &
+     (get_piece_positions(BISHOP, op_color) |
+      get_piece_positions(QUEEN, op_color))) |
+    (get_rook_attacks(king_position) &
+     (get_piece_positions(ROOK, op_color) |
+      get_piece_positions(QUEEN, op_color))) |
+    (get_king_attacks(king_position) &
+     (get_piece_positions(KING, op_color)));
 }
 
 // Sliding piece attack generation
