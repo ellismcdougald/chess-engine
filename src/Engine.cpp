@@ -9,6 +9,8 @@
 #define ENGINE_CPP // GUARD
 
 Engine::Engine() {
+  white_increment = 0;
+  black_increment = 0;
   time_divider = 50;
   time_set = false;
 }
